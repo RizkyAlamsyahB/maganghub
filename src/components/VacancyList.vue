@@ -17,6 +17,11 @@ const pagination = ref(null)
 // Filter states
 const searchQuery = ref('')
 const selectedProvince = ref('')
+const selectedProdi = ref('')
+
+// Cache untuk filtered data saat filter prodi aktif
+const filteredCache = ref([])
+const isCacheValid = ref(false)
 
 // Computed properties untuk pagination
 const totalPages = computed(() => pagination.value?.pagination?.last_page || 0)
@@ -72,9 +77,109 @@ async function fetchVacancies() {
       province: selectedProvince.value,
     }
 
-    const result = await getVacancies(currentPage.value, itemsPerPage.value, filters)
-    vacancies.value = result.data
-    pagination.value = result.meta
+    let filteredData = []
+
+    // Jika filter prodi aktif
+    if (selectedProdi.value) {
+      // Jika cache valid, gunakan cache
+      if (isCacheValid.value && filteredCache.value.length > 0) {
+        filteredData = filteredCache.value
+      } else {
+        // Fetch pertama untuk mendapatkan total yang akurat
+        const initialResult = await getVacancies(1, 1000, filters)
+        const total = initialResult.meta?.pagination?.total || 0
+        const lastPage = initialResult.meta?.pagination?.last_page || 1
+
+        console.log('Total available from API:', total) // Debug
+        console.log('Last page:', lastPage) // Debug
+
+        // Fetch multiple pages untuk mendapatkan semua data
+        const allData = [...initialResult.data]
+
+        // Fetch max 20 pages (20 x 1000 = 20,000 items) untuk performa
+        const maxPages = Math.min(lastPage, 20)
+
+        for (let page = 2; page <= maxPages; page++) {
+          const pageResult = await getVacancies(page, 1000, filters)
+          allData.push(...pageResult.data)
+          console.log(`Fetched page ${page}/${maxPages}, total so far: ${allData.length}`)
+        }
+
+        console.log('Total data fetched:', allData.length) // Debug
+        console.log('Filter prodi ID:', selectedProdi.value) // Debug
+
+        // Debug: tampilkan sample program_studi dari 10 data pertama
+        console.log('=== SAMPLE PROGRAM STUDI (10 first items) ===')
+        allData.slice(0, 10).forEach((v, idx) => {
+          if (v.program_studi) {
+            try {
+              const parsed = JSON.parse(v.program_studi)
+              console.log(`Item ${idx + 1}:`, parsed)
+            } catch {
+              console.log(`Item ${idx + 1}: FAILED TO PARSE`)
+            }
+          }
+        })
+        console.log('===========================================')
+
+        // Parse selected prodi IDs (bisa multiple IDs dalam array)
+        let selectedProdiIds = []
+        try {
+          selectedProdiIds = JSON.parse(selectedProdi.value)
+        } catch {
+          selectedProdiIds = [selectedProdi.value] // Fallback ke single ID
+        }
+
+        console.log('Selected prodi IDs:', selectedProdiIds) // Debug
+
+        // Filter by program studi on client-side
+        filteredData = allData.filter((vacancy) => {
+          if (!vacancy.program_studi) return false
+          try {
+            const programList = JSON.parse(vacancy.program_studi)
+            // Check if any of the program studi matches any of selected IDs
+            const isMatch = programList.some((program) => {
+              const programId = String(program.id).trim()
+              // Check if this ID is in the selected IDs array
+              return selectedProdiIds.some((selectedId) => programId === String(selectedId).trim())
+            })
+            return isMatch
+          } catch (error) {
+            console.warn('Failed to parse program_studi:', vacancy.program_studi, error)
+            return false
+          }
+        })
+
+        console.log('Filtered results:', filteredData.length) // Debug
+
+        // Simpan ke cache
+        filteredCache.value = filteredData
+        isCacheValid.value = true
+      }
+
+      // Implement client-side pagination for filtered results
+      const startIndex = (currentPage.value - 1) * itemsPerPage.value
+      const endIndex = startIndex + itemsPerPage.value
+      const paginatedData = filteredData.slice(startIndex, endIndex)
+
+      // Update pagination info for filtered results
+      vacancies.value = paginatedData
+      pagination.value = {
+        pagination: {
+          total: filteredData.length,
+          per_page: itemsPerPage.value,
+          current_page: currentPage.value,
+          last_page: Math.ceil(filteredData.length / itemsPerPage.value),
+          from: startIndex + 1,
+          to: Math.min(endIndex, filteredData.length),
+        },
+      }
+    } else {
+      // Normal pagination
+      const result = await getVacancies(currentPage.value, itemsPerPage.value, filters)
+      vacancies.value = result.data
+      pagination.value = result.meta
+    }
 
     // Scroll to top when page changes
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -90,12 +195,22 @@ async function fetchVacancies() {
 function handleSearch(query) {
   searchQuery.value = query
   currentPage.value = 1 // Reset to first page on search
+  isCacheValid.value = false // Invalidate cache
   fetchVacancies()
 }
 
 function handleFilterProvince(provinceCode) {
   selectedProvince.value = provinceCode
   currentPage.value = 1 // Reset to first page on filter
+  isCacheValid.value = false // Invalidate cache
+  fetchVacancies()
+}
+
+function handleFilterProdi(prodiId) {
+  selectedProdi.value = prodiId
+  currentPage.value = 1 // Reset to first page on filter
+  isCacheValid.value = false // Invalidate cache
+  filteredCache.value = [] // Clear cache
   fetchVacancies()
 }
 
@@ -145,7 +260,11 @@ onMounted(() => {
     </div>
 
     <!-- Search and Filter -->
-    <SearchFilter @search="handleSearch" @filter-province="handleFilterProvince" />
+    <SearchFilter
+      @search="handleSearch"
+      @filter-province="handleFilterProvince"
+      @filter-prodi="handleFilterProdi"
+    />
 
     <!-- Loading State -->
     <div v-if="isLoading" class="flex justify-center items-center min-h-[400px]">

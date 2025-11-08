@@ -80,3 +80,76 @@ export async function getStatistics() {
     throw error
   }
 }
+
+/**
+ * Mengambil semua program studi unik dari data lowongan
+ * @returns {Promise<Array>} Array of program studi objects {id, title}
+ */
+export async function getAllProgramStudi() {
+  try {
+    // Ambil semua lowongan dengan limit yang lebih besar
+    const response = await fetch(
+      `${API_BASE_URL}?limit=10000&order_by=jumlah_kuota&order_direction=DESC`,
+    )
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+
+    if (!result.data || !Array.isArray(result.data)) {
+      throw new Error('Invalid API response format')
+    }
+
+    console.log('Total vacancies fetched:', result.data.length) // Debug log
+
+    // Map untuk group program studi berdasarkan title (case-insensitive)
+    // Value: array of IDs dengan title yang sama
+    const programStudiGroupMap = new Map()
+
+    result.data.forEach((vacancy) => {
+      if (vacancy.program_studi) {
+        try {
+          // Parse JSON string
+          const programList = JSON.parse(vacancy.program_studi)
+          programList.forEach((program) => {
+            if (program.id && program.title) {
+              // Normalize title (lowercase, trim, remove extra spaces)
+              const normalizedTitle = program.title.trim().toLowerCase().replace(/\s+/g, ' ') // Replace multiple spaces with single space
+
+              // Jika title belum ada, buat entry baru
+              if (!programStudiGroupMap.has(normalizedTitle)) {
+                programStudiGroupMap.set(normalizedTitle, {
+                  title: program.title.trim(), // Keep original case
+                  ids: new Set(), // Set untuk avoid duplicate IDs
+                })
+              }
+
+              // Tambahkan ID ke group
+              programStudiGroupMap.get(normalizedTitle).ids.add(program.id)
+            }
+          })
+        } catch (error) {
+          console.warn('Failed to parse program_studi:', vacancy.program_studi, error)
+        }
+      }
+    })
+
+    // Convert Map ke array dan convert Set ke Array untuk IDs
+    const programStudiList = Array.from(programStudiGroupMap.values())
+      .map((item) => ({
+        title: item.title,
+        ids: Array.from(item.ids), // Convert Set to Array
+      }))
+      .sort((a, b) => a.title.localeCompare(b.title))
+
+    console.log('Total unique program studi found:', programStudiList.length) // Debug log
+    console.log('Program studi list:', programStudiList) // Debug log
+
+    return programStudiList
+  } catch (error) {
+    console.error('Error fetching program studi:', error)
+    throw error
+  }
+}
