@@ -119,7 +119,7 @@ const chanceColor = computed(() => {
       <!-- Tombol Lihat Detail -->
       <div class="flex items-end">
         <a
-          :href="`https://maganghub.kemnaker.go.id/be/v1/api/read/vacancies-aktif/${vacancy.id_posisi}?order_direction=ASC&page=1&limit=10`"
+          :href="`https://maganghub.kemnaker.go.id/lowongan/view/${vacancy.id_posisi}`"
           target="_blank"
           rel="noopener noreferrer"
           class="w-full text-center bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-xs font-medium py-2 px-1 rounded-lg transition-colors duration-200"
