@@ -5,6 +5,7 @@ import VacancyCard from '@/components/VacancyCard.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import SearchFilter from '@/components/SearchFilter.vue'
 import TimelineSteps from '@/components/TimelineSteps.vue'
+import StatisticsCards from '@/components/StatisticsCards.vue'
 
 const vacancies = ref([])
 const isLoading = ref(false)
@@ -138,6 +139,9 @@ onMounted(() => {
 
       <!-- Timeline Steps -->
       <TimelineSteps />
+
+      <!-- Statistics Cards -->
+      <StatisticsCards />
     </div>
 
     <!-- Search and Filter -->

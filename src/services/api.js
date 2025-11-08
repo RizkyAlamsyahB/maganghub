@@ -48,3 +48,35 @@ export async function getVacancies(page = 1, limit = 20, filters = {}) {
     throw error
   }
 }
+
+/**
+ * Mengambil statistik dari API front page
+ * @returns {Promise<Object>} Object containing statistics data
+ */
+export async function getStatistics() {
+  try {
+    const response = await fetch('https://maganghub.kemnaker.go.id/be/v1/api/statistik_front_page')
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+
+    if (!result.data) {
+      throw new Error('Invalid API response format')
+    }
+
+    return {
+      totalLowongan: result.data['Jumlah Lowongan'] || 0,
+      totalLowonganVerifikasi: result.data['Jumlah Lowongan Terverifikasi'] || 0,
+      totalPelamar: result.data['Jumlah Pelamar'] || 0,
+      totalPendaftar: result.data['Jumlah Pendaftar Magang'] || 0,
+      totalPerusahaan: result.data['Jumlah Perusahaan'] || 0,
+      totalPeserta: result.data['Jumlah Peserta Magang'] || 0,
+    }
+  } catch (error) {
+    console.error('Error fetching statistics:', error)
+    throw error
+  }
+}
