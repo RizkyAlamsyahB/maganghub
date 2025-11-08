@@ -4,6 +4,7 @@ import { getVacancies } from '@/services/api'
 import VacancyCard from '@/components/VacancyCard.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import SearchFilter from '@/components/SearchFilter.vue'
+import TimelineSteps from '@/components/TimelineSteps.vue'
 
 const vacancies = ref([])
 const isLoading = ref(false)
@@ -131,9 +132,12 @@ onMounted(() => {
       <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
         Lowongan Magang Tersedia
       </h1>
-      <p class="text-gray-600 dark:text-gray-400">
+      <p class="text-gray-600 dark:text-gray-400 mb-8">
         Temukan peluang magang terbaik dari Magang Hub Kemnaker
       </p>
+
+      <!-- Timeline Steps -->
+      <TimelineSteps />
     </div>
 
     <!-- Search and Filter -->

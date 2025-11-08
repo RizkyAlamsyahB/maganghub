@@ -1,5 +1,6 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { isVacancySaved, saveVacancy, removeSavedVacancy } from '@/services/bookmark'
 
 const props = defineProps({
   vacancy: {
@@ -7,6 +8,22 @@ const props = defineProps({
     required: true,
   },
 })
+
+const emit = defineEmits(['bookmark-changed'])
+
+const isSaved = ref(isVacancySaved(props.vacancy.id_posisi))
+
+// Toggle bookmark
+function toggleBookmark() {
+  if (isSaved.value) {
+    removeSavedVacancy(props.vacancy.id_posisi)
+    isSaved.value = false
+  } else {
+    saveVacancy(props.vacancy)
+    isSaved.value = true
+  }
+  emit('bookmark-changed')
+}
 
 // Hitung peluang diterima (%)
 const acceptanceChance = computed(() => {
@@ -31,10 +48,32 @@ const chanceColor = computed(() => {
 
 <template>
   <div
-    class="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-6 flex flex-col h-full"
+    class="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-6 flex flex-col h-full relative"
   >
+    <!-- Bookmark Button -->
+    <button
+      @click="toggleBookmark"
+      class="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors z-10"
+      :title="isSaved ? 'Hapus dari tersimpan' : 'Simpan lowongan'"
+    >
+      <svg
+        class="w-6 h-6 transition-colors"
+        :class="isSaved ? 'text-red-500 fill-current' : 'text-gray-400'"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+        />
+      </svg>
+    </button>
+
     <!-- Header: Logo dan Nama Perusahaan -->
-    <div class="flex items-start gap-4 mb-4">
+    <div class="flex items-start gap-4 mb-4 pr-8">
       <div class="shrink-0">
         <img
           v-if="vacancy.perusahaan?.logo"
